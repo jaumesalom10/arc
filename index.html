@@ -163,6 +163,7 @@ footer{color:var(--faint);font-size:12px;text-align:center;padding:26px 0 8px}
     <button role="tab" data-tab="tareas">Tareas</button>
     <button role="tab" data-tab="objetivos">Objetivos</button>
     <button role="tab" data-tab="stats">Estadísticas</button>
+    <button role="tab" data-tab="analisis">Análisis</button>
   </nav>
 </div></header>
 <div class="wrap">
@@ -216,7 +217,7 @@ const ARCS = [
   {id:'tri', name:'Arco 70.3', from:'2027-09-15', to:'2028-05-31'},
 ];
 const ARC_START = '2026-09-28'; // primer lunes del Winter Arc
-const SLOGANS = {hoy:['Un día.','Un paso.'], habitos:['Tu constancia.','A tu ritmo.'], tareas:['Menos ruido.','Más acción.'], objetivos:['Una dirección.','Pasos concretos.'], stats:['Mira atrás.','Ajusta y sigue.'], ajustes:['Tu sistema.','Tus reglas.']};
+const SLOGANS = {hoy:['Un día.','Un paso.'], habitos:['Tu constancia.','A tu ritmo.'], tareas:['Menos ruido.','Más acción.'], objetivos:['Una dirección.','Pasos concretos.'], stats:['Mira atrás.','Ajusta y sigue.'], analisis:['Tus datos.','Tus respuestas.'], ajustes:['Tu sistema.','Tus reglas.']};
 const arcOf = d => ARCS.find(a => d >= a.from && d <= a.to) || ARCS[ARCS.length - 1];
 
 /* ---------- Cuaderno Barcelona 2027 (solo lectura) ---------- */
@@ -304,13 +305,13 @@ async function loadAll() {
     const logs = {}; (l.data || []).forEach(r => logs[r.key] = r.data);
     S.cu = {logs, moves: (s.data && s.data.data && s.data.data.moves) || {}, ok: true};
   } catch (e) { S.cu.ok = false; }
-  S.mode = 'db'; cacheSave(); setSync('db'); render();
+  S.mode = 'db'; cacheSave(); setSync('db'); upgrade(); render();
 }
 let reloadT;
 function scheduleReload() { clearTimeout(reloadT); reloadT = setTimeout(() => { if (!pending.size) loadAll().catch(() => setSync('error')); }, 600); }
 async function init() {
   if (LOCAL) {
-    S.mode = 'local'; loadLocal();
+    S.mode = 'local'; loadLocal(); upgrade();
     try { const c = JSON.parse(localStorage.getItem('arc-cu-test') || 'null'); if (c) S.cu = Object.assign({logs: {}, moves: {}}, c, {ok: true}); } catch (e) {}
     setSync('local'); render(); return;
   }
@@ -347,9 +348,14 @@ const SEED_GOALS = [
     {title:'Noviembre y diciembre sin semanas perdidas', due:'2026-12-31'}, {title:'Tirada más larga de 30–32 km', due:'2027-02-21'},
     {title:'Taper bien hecho: llegar fresco', due:'2027-03-07'}, {title:'Cruzar la meta en menos de 4 h', due:'2027-03-14'}]},
   {id:'grado', big:true, order:2, title:'Graduarme: TFG y coautoría del artículo', due:'2027-06-30', why:'Validar una pulsera tipo WHOOP y salir como coautor.', milestones:[
-    {title:'Protocolo de validación cerrado con el tutor', due:'2026-12-31'}, {title:'Confirmar si saldré como coautor del artículo', due:'2026-12-31'},
-    {title:'Mediciones del TFG en marcha', due:'2027-02-28'}, {title:'Defender el TFG', due:'2027-06-30'},
-    {title:'Preguntar al coordinador por repositorio o premio', due:'2027-06-30'}]},
+    {title:'Lliurament parcial 1: títol, tema i proposta metodològica', due:'2026-10-21', done:true, doneAt:'2026-10-21'},
+    {title:'Lliurament parcial 2: esborrany del marc teòric (21 h)', due:'2026-11-11', entrega:true},
+    {title:'Lliurament parcial 3: proposta metodològica / protocol de validació (21 h)', due:'2026-11-25', entrega:true},
+    {title:'Confirmar si saldré como coautor del artículo', due:'2026-12-22'},
+    {title:'Projecte del TFG definitiu (21 h)', due:'2026-12-22', entrega:true},
+    {title:'Mediciones del TFG en marcha', due:'2027-02-28'},
+    {title:'Entrega final del TFG (9 h): PDF en SCALA (Cognom_Nom_TFG), abstract en el Drive compartido y formulario de cesión a la biblioteca', due:'2027-05-19', entrega:true},
+    {title:'Defender el TFG (fecha por confirmar)', due:'2027-06-30'}]},
   {id:'tri703', big:true, order:3, title:'Ironman 70.3 Alcúdia', due:'2028-05-06', why:'El siguiente reto después del maratón.', note:'La fecha de 2028 aún no está publicada: ajústala cuando salga.', milestones:[
     {title:'Empezar las clases de natación', due:'2027-04-30'}, {title:'Inscribirme el día que abra', due:'2027-06-30'},
     {title:'Comprar la bici', due:'2027-07-31'}, {title:'Empezar el bloque específico', due:'2028-01-15'}]},
@@ -365,13 +371,13 @@ const SEED_GOALS = [
 ];
 const ALL_DAYS = [1,2,3,4,5,6,0];
 const SEED_HABITS = [
-  {id:'reading', core:true, order:1, name:'Lectura', detail:'20 min · una idea que llevarte', target:7, min:5},
+  {id:'reading', core:true, order:1, name:'Lectura', detail:'20 min · una idea que llevarte', target:7, min:5, minLoad:4},
   {id:'train', core:true, order:2, name:'Entreno', detail:'Se marca solo con el Cuaderno Barcelona 2027', target:6, min:3, source:'cuaderno', goal:'maraton'},
-  {id:'sleep', core:true, order:3, name:'Proteger el sueño', detail:'Desconectar 23:30 · en la cama 00:30 como tarde · arriba 08:00', target:5, min:4, goal:'maraton'},
+  {id:'sleep', core:true, order:3, name:'Proteger el sueño', detail:'Desconectar 23:30 · en la cama 00:30 como tarde · arriba 08:00', target:5, min:3, minUp:4, goal:'maraton'},
   {id:'study', core:true, order:4, name:'TFG', detail:'Bloques de 45 min · validación de la pulsera', target:4, min:3, goal:'grado', to:'2027-06-30', multi:true},
-  {id:'phone', core:true, order:5, name:'Control del móvil', detail:'TikTok, Reels y X ≤ 30 min', target:5, min:4},
-  {id:'english', core:true, order:6, name:'Inglés', detail:'30 min · podcast, artículos o clase', target:7, min:5, goal:'trabajo', isNew:true},
-  {id:'learning', core:true, order:7, name:'Formación', detail:'Bloques de 45 min · aplicar lo aprendido', focus:'Curso de Excel', target:4, min:2, goal:'trabajo', multi:true},
+  {id:'phone', core:true, order:5, name:'Control del móvil', detail:'TikTok, Reels y X ≤ 30 min', target:5, min:3, minUp:4},
+  {id:'english', core:true, order:6, name:'Inglés', detail:'30 min · podcast, artículos o clase', target:7, min:5, minLoad:3, goal:'trabajo', isNew:true},
+  {id:'learning', core:true, order:7, name:'Formación', detail:'Bloques de 45 min · aplicar lo aprendido', focus:'Curso de Excel', target:4, min:2, minLoad:1, goal:'trabajo', multi:true},
   {id:'order', order:20, name:'Orden', detail:'10 min', target:5},
   {id:'tomorrow', order:21, name:'Preparar mañana', detail:'Prioridad y material listos', target:5},
   {id:'start', order:22, name:'Empezar lo que evito', detail:'Una acción pequeña', target:3},
@@ -380,8 +386,19 @@ function seedRecords(since) {
   const recs = [];
   SEED_GOALS.forEach(g => recs.push(['goal', g.id, Object.assign({milestones: []}, JSON.parse(JSON.stringify(g)), {milestones: g.milestones.map(m => Object.assign({done: false}, m))})]));
   SEED_HABITS.forEach(h => { const b = Object.assign({days: ALL_DAYS, freq: 'weekly', from: h.isNew ? since : '2026-10-01', source: 'manual'}, h); if (!b.core) b.min = b.target; delete b.isNew; recs.push(['habit', h.id, b]); });
-  recs.push(['meta', 'setup', {at: new Date().toISOString(), version: 1}]);
+  recs.push(['meta', 'setup', {at: new Date().toISOString(), version: 2}]);
   return recs;
+}
+
+// Cambios de reglas sobre datos ya creados (se aplica una sola vez por versión)
+function upgrade() {
+  const meta = S.items.meta.setup; if (!meta || (meta.version || 1) >= 2) return;
+  const H = S.items.habit, set = (id, patch) => { if (H[id]) put('habit', id, Object.assign({}, H[id], patch)); };
+  set('sleep', {min: 3, minUp: 4}); set('phone', {min: 3, minUp: 4});
+  set('reading', {minLoad: 4}); set('english', {minLoad: 3}); set('learning', {minLoad: 1});
+  const g = S.items.goal.grado;
+  if (g) { const c = JSON.parse(JSON.stringify(g)); c.milestones.forEach(m => { if (/^(Lliurament parcial [234]|Projecte del TFG|Entrega final)/.test(m.title)) m.entrega = true; }); put('goal', 'grado', c); }
+  put('meta', 'setup', Object.assign({}, meta, {version: 2}));
 }
 
 /* ---------- Importar desde Winter Arc ---------- */
@@ -452,7 +469,22 @@ function weekCount(h, mon) {
 }
 // Días de la semana en que el hábito existe (si empieza o termina a mitad de semana, el mínimo se reparte)
 function activeDays(h, mon) { let n = 0; for (let i = 0; i < 7; i++) if (activeOn(h, add(mon, i))) n++; return n; }
-function need(h, mon) { if (h.freq === 'monthly') return h.min || h.target; const n = activeDays(h, mon); return n >= 7 ? (h.min || h.target) : Math.ceil((h.min || h.target) * n / 7); }
+function baseMin(h, mon) { return (h.minLoad != null && isLoadWeek(mon)) ? h.minLoad : (h.min || h.target); }
+function need(h, mon) { if (h.freq === 'monthly') return h.min || h.target; const n = activeDays(h, mon), b = baseMin(h, mon); return n >= 7 ? b : Math.ceil(b * n / 7); }
+
+/* ---------- Semanas de entrega ----------
+   Cada hito marcado como entrega convierte en «semana de entrega» la semana (lunes–domingo)
+   que contiene la mayoría de los 7 días previos a la entrega. En esa semana bajan los mínimos
+   de los hábitos con «mínimo en semana de entrega» (Formación, Inglés, Lectura). */
+function deadlines() { const out = []; goals().forEach(g => (g.milestones || []).forEach((m, i) => { if (m.entrega && m.due && !m.done) out.push({g, m, i}); })); return out.sort((a, b) => a.m.due.localeCompare(b.m.due)); }
+function loadMonOf(due) { const start = add(due, -6), m1 = monOf(start), m2 = monOf(due); if (m1 === m2) return m1; return diff(add(m1, 6), start) + 1 >= 4 ? m1 : m2; }
+function loadInfo(mon) {
+  const L = S.items.meta.load || {}; if ((L.off || []).includes(mon)) return null;
+  const items = []; goals().forEach(g => (g.milestones || []).forEach(m => { if (m.entrega && m.due && loadMonOf(m.due) === mon) items.push({g, m}); }));
+  if (items.length) return {auto: true, items};
+  return (L.on || []).includes(mon) ? {auto: false, items: []} : null;
+}
+const isLoadWeek = mon => !!loadInfo(mon);
 function ideal(h, mon) { if (h.freq === 'monthly') return h.target; const n = activeDays(h, mon); return n >= 7 ? h.target : Math.max(1, Math.round(h.target * n / 7)); }
 function evalWeek(mon) {
   const core = habits().filter(h => h.core && activeIn(h, mon) && h.freq !== 'monthly');
@@ -526,7 +558,7 @@ function render() {
   if (S.mode === 'auth') { m.innerHTML = viewLogin(); return; }
   if (S.mode === 'schema') { m.innerHTML = viewSchema(); return; }
   if (!S.items.meta.setup) { m.innerHTML = viewSetup(); return; }
-  m.innerHTML = ({hoy: viewHoy, habitos: viewHabitos, tareas: viewTareas, objetivos: viewObjetivos, stats: viewStats, ajustes: viewAjustes}[S.tab] || viewHoy)();
+  m.innerHTML = ({hoy: viewHoy, habitos: viewHabitos, tareas: viewTareas, objetivos: viewObjetivos, stats: viewStats, analisis: viewAnalisis, ajustes: viewAjustes}[S.tab] || viewHoy)();
   $('#foot').innerHTML = `ARC · Winter Arc → Maratón → Grado → Verano → 70.3 · <a href="#" data-act="rules">Reglas</a>`;
 }
 
@@ -577,6 +609,12 @@ function weekCard() {
   const t = today(), w = evalWeek(monOf(t)), st = weekStats();
   const chip = w.state === 'won' ? `<span class="chip ok">Semana ganada${w.joker ? ' · con comodín' : ''}</span>` : `<span class="chip">En juego · quedan ${diff(add(w.mon, 6), t) + 1} días</span>`;
   const miss = w.rows.filter(r => !r.ok).map(r => `${esc(r.h.name)} (${num(r.c)}/${r.need})`).join(' · ');
+  const li = loadInfo(w.mon), next = deadlines().find(x => x.m.due >= t);
+  const lowered = habits().filter(h => h.core && h.minLoad != null && activeIn(h, w.mon)).map(h => `${esc(h.name)} ${h.minLoad}`).join(' · ');
+  const ups = habits().filter(h => h.minUp && h.minUp > (h.min || 0));
+  const loadHtml = li ? `<div class="alert" style="margin-top:12px"><b>Semana de entrega</b>${li.items.length ? ` · ${li.items.map(x => esc(x.m.title.split(':')[0])).join(' · ')}` : ''}. Mínimos reducidos: ${lowered}. Sueño, móvil, entreno y TFG se mantienen.</div>` : '';
+  const nextHtml = next && diff(next.m.due, t) <= 21 ? `<p class="small" style="margin:10px 0 0">Próxima entrega: <b>${esc(next.m.title.split(':')[0])}</b> · ${DIA[dowOf(next.m.due)]} ${fD(next.m.due)} · ${diff(next.m.due, t) === 0 ? 'es hoy' : `faltan ${diff(next.m.due, t)} días`}</p>` : '';
+  const upHtml = st.streak >= 3 && ups.length ? `<div class="alert ok" style="margin-top:12px">Llevas ${st.streak} semanas ganadas seguidas. Es buen momento para subir el mínimo de ${ups.map(h => `${esc(h.name)} a ${h.minUp}`).join(' y ')}. <button class="btn sm" data-act="raise-min" style="margin-top:6px">Subir mínimos</button></div>` : '';
   return `<div class="card">
     <div class="spread"><div class="kicker">Esta semana</div>${chip}</div>
     <div class="kpis" style="margin-top:12px">
@@ -586,11 +624,12 @@ function weekCard() {
     </div>
     <div class="bar" style="margin-top:12px"><i style="width:${w.score}%"></i></div>
     <p class="small muted" style="margin:8px 0 0">Constancia ${w.score}% del ideal.${miss ? ` Para el mínimo te falta: ${miss}.` : ' Mínimo de la semana cumplido.'}</p>
+    ${nextHtml}${loadHtml}${upHtml}
   </div>`;
 }
 function habitRow(h, date) {
   const mon = monOf(date), c = weekCount(h, mon), st = dayState(h, date), auto = h.source === 'cuaderno';
-  const tgt = h.freq === 'monthly' ? `${num(c)}/${h.target} este mes` : `${num(c)}/${h.target} esta semana${h.core ? ` · mínimo ${h.min}` : ''}`;
+  const tgt = h.freq === 'monthly' ? `${num(c)}/${h.target} este mes` : `${num(c)}/${h.target} esta semana${h.core ? ` · mínimo ${need(h, mon)}` : ''}`;
   const notToday = h.days && h.days.length < 7 && !h.days.includes(dowOf(date));
   const cnt = h.multi && logOf(h, date) && (logOf(h, date).count || 1) > 1 ? logOf(h, date).count : (st === 'auto' ? autoVal(h, date) : '');
   return `<div class="hab">
@@ -651,14 +690,15 @@ function viewHabitos() {
   const mon = S.week, t = today(), days = [...Array(7)].map((_, i) => add(mon, i));
   const hs = habits().filter(h => activeIn(h, mon));
   const row = h => { const c = weekCount(h, mon);
-    return `<tr><td><div class="hn">${esc(h.name)}</div><div class="ht">${h.freq === 'monthly' ? `${h.target}/mes` : `${h.target}/sem${h.core ? ` · mín. ${h.min}` : ''}`}</div></td>
+    return `<tr><td><div class="hn">${esc(h.name)}</div><div class="ht">${h.freq === 'monthly' ? `${h.target}/mes` : `${h.target}/sem${h.core ? ` · mín. ${need(h, mon)}` : ''}`}</div></td>
       ${days.map(d => { const st = dayState(h, d), fut = d > t, off = !activeOn(h, d) || (h.days && h.days.length < 7 && !h.days.includes(dowOf(d)));
         return `<td class="${d === t ? 'today' : ''}"><button class="cell ${off ? 'off' : ''}" data-act="tap" data-h="${esc(h.id)}" data-d="${d}" data-st="${st}" ${fut || !activeOn(h, d) ? 'disabled' : ''} aria-label="${esc(h.name)} ${fD(d)}">${st === 'auto' ? autoVal(h, d) : ''}</button></td>`; }).join('')}
       <td><b class="${c >= (h.min || h.target) ? '' : 'faint'}" style="${c >= (h.min || h.target) ? 'color:var(--accent)' : ''}">${num(c)}/${h.target}</b></td></tr>`; };
-  const w = evalWeek(mon);
+  const w = evalWeek(mon), li = loadInfo(mon);
+  const loadBtn = `<div class="row small" style="margin-bottom:8px"><button class="btn sm ${li ? 'primary' : ''}" data-act="load-toggle" data-m="${mon}">${li ? 'Semana de entrega ✓' : 'Marcar como semana de entrega'}</button><span class="muted">${li ? (li.auto ? 'Por: ' + li.items.map(x => esc(x.m.title.split(':')[0])).join(' · ') : 'Marcada a mano') : 'Baja los mínimos de Formación, Inglés y Lectura'}</span></div>`;
   return `<div class="card"><div class="kicker">El plan, día a día</div>
     <div class="spread"><h2>Tus hábitos</h2><div class="week-nav"><button class="btn sm" data-act="week" data-n="-1">‹</button><span class="small">${fD(mon)} — ${fD(add(mon, 6))}</span><button class="btn sm" data-act="week" data-n="1" ${add(mon, 7) > t ? 'disabled' : ''}>›</button></div></div>
-    <div class="row small" style="margin-bottom:8px">${w.state === 'won' ? `<span class="chip ok">Semana ganada${w.joker ? ' · comodín' : ''}</span>` : w.state === 'lost' ? '<span class="chip crit">Semana perdida</span>' : '<span class="chip">En juego</span>'}<span class="muted">Constancia ${w.score}% · mínimos ${w.okCount}/${w.rows.length}</span></div>
+    <div class="row small" style="margin-bottom:8px">${w.state === 'won' ? `<span class="chip ok">Semana ganada${w.joker ? ' · comodín' : ''}</span>` : w.state === 'lost' ? '<span class="chip crit">Semana perdida</span>' : '<span class="chip">En juego</span>'}<span class="muted">Constancia ${w.score}% · mínimos ${w.okCount}/${w.rows.length}</span></div>${loadBtn}
     <div style="overflow-x:auto"><table class="grid"><thead><tr><th>Hábito</th>${days.map((d, i) => `<th class="${d === t ? 'today' : ''}">${DL[i]}<br>${+d.slice(8)}</th>`).join('')}<th>Total</th></tr></thead>
       <tbody><tr class="sep"><td colspan="9">Núcleo · cuentan para la semana</td></tr>${hs.filter(h => h.core).map(row).join('')}
       <tr class="sep"><td colspan="9">Extras · suman, no restan</td></tr>${hs.filter(h => !h.core).map(row).join('')}</tbody></table></div>
@@ -686,7 +726,7 @@ function viewTareas() {
 /* ---- Objetivos ---- */
 function msList(g) {
   const t = today();
-  return (g.milestones || []).map((m, i) => `<div class="ms ${m.done ? 'done' : ''}"><input type="checkbox" data-act="ms-toggle" data-g="${esc(g.id)}" data-i="${i}" ${m.done ? 'checked' : ''}><div class="t">${esc(m.title)}</div>${m.due ? `<span class="due ${!m.done && m.due < t ? 'late' : ''}">${fD(m.due)}${m.due.slice(0, 4) !== t.slice(0, 4) ? ' ' + m.due.slice(2, 4) : ''}</span>` : ''}</div>`).join('');
+  return (g.milestones || []).map((m, i) => `<div class="ms ${m.done ? 'done' : ''}"><input type="checkbox" data-act="ms-toggle" data-g="${esc(g.id)}" data-i="${i}" ${m.done ? 'checked' : ''}><div class="t">${esc(m.title)}${m.entrega ? ' <span class="chip warn">entrega</span>' : ''}</div>${m.due ? `<span class="due ${!m.done && m.due < t ? 'late' : ''}">${fD(m.due)}${m.due.slice(0, 4) !== t.slice(0, 4) ? ' ' + m.due.slice(2, 4) : ''}</span>` : ''}</div>`).join('');
 }
 function goalCard(g, sub) {
   const t = today(), p = goalProgress(g), days = g.due ? diff(g.due, t) : null;
@@ -780,6 +820,102 @@ function viewStats() {
       <div class="row"><button class="btn primary">Guardar revisión</button>${rev.savedAt ? `<span class="small muted">Guardada ${fD(rev.savedAt.slice(0, 10))}</span>` : ''}</div></form></div>`;
 }
 
+/* ---- Análisis: cruza el Cuaderno con tus hábitos y check-ins ---- */
+function dailyData() {
+  const t = today(), rows = [], byDate = {}, H = S.items.habit;
+  if (S.cu.ok) cuPlan().forEach(s => { const l = S.cu.logs[s.key]; if (l && l.result) (byDate[s.date] = byDate[s.date] || []).push({s, l}); });
+  const first = S.cu.ok ? CU_START : ARC_START;
+  for (let d = first; d <= t; d = add(d, 1)) {
+    const cs = byDate[d] || [], done = cs.filter(x => cuDone(x.l));
+    const pick = k => { const v = cs.map(x => x.l[k]).filter(v => v != null && v !== '' && !isNaN(+v)).map(Number); return v.length ? avg(v) : null; };
+    const m = S.items.mood[d] || {}, hd = id => H[id] && activeOn(H[id], d) ? (dayVal(H[id], d) > 0 ? 1 : 0) : null;
+    const core = habits().filter(h => h.core && activeOn(h, d) && h.freq !== 'monthly');
+    const km = sum(done.filter(x => x.s.kind === 'run').map(x => +x.l.actualKm || 0));
+    rows.push({date: d, sleepH: pick('sleep'), hrv: pick('hrv'), rhr: pick('restingHr'), rpe: pick('rpe'), recovery: pick('recovery'), km: km || null,
+      sessions: done.length, trained: done.length ? 1 : 0, energy: m.energy ?? null, focus: m.focus ?? null, motivation: m.motivation ?? null,
+      phoneMin: m.minutes != null && m.minutes !== '' ? +m.minutes : null, sleepHabit: hd('sleep'), phoneHabit: hd('phone'), readingHabit: hd('reading'),
+      coreDone: core.length ? core.filter(h => dayVal(h, d) > 0).length : null});
+  }
+  rows.forEach((r, i) => { r.prevSleepHabit = i ? rows[i - 1].sleepHabit : null; });
+  return rows;
+}
+function pearson(xs, ys) {
+  const n = xs.length; if (n < 3) return null;
+  const mx = avg(xs), my = avg(ys); let a = 0, bx = 0, by = 0;
+  for (let i = 0; i < n; i++) { a += (xs[i] - mx) * (ys[i] - my); bx += (xs[i] - mx) ** 2; by += (ys[i] - my) ** 2; }
+  return bx && by ? a / Math.sqrt(bx * by) : null;
+}
+const rWords = r => { const a = Math.abs(r); return a < .2 ? 'sin relación clara' : a < .4 ? 'relación débil' : a < .6 ? 'relación moderada' : 'relación fuerte'; };
+function scatterChart(pts, xl, yl) {
+  const W = 360, H = 210, P = {l: 34, r: 8, t: 10, b: 34};
+  const xs = pts.map(p => p[0]), ys = pts.map(p => p[1]);
+  let x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
+  if (x0 === x1) { x0 -= 1; x1 += 1; } if (y0 === y1) { y0 -= 1; y1 += 1; }
+  const px = (x1 - x0) * .08, py = (y1 - y0) * .1; x0 -= px; x1 += px; y0 -= py; y1 += py;
+  const X = v => P.l + (v - x0) / (x1 - x0) * (W - P.l - P.r), Y = v => P.t + (1 - (v - y0) / (y1 - y0)) * (H - P.t - P.b);
+  const mx = avg(xs), my = avg(ys), sxx = sum(xs.map(x => (x - mx) ** 2)), b = sxx ? sum(xs.map((x, i) => (x - mx) * (ys[i] - my))) / sxx : 0, a = my - b * mx;
+  const tk = (lo, hi) => [lo, (lo + hi) / 2, hi];
+  return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(xl)} frente a ${esc(yl)}">
+    ${tk(y0 + py, y1 - py).map(v => `<line x1="${P.l}" x2="${W - P.r}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--line)"/><text x="${P.l - 5}" y="${Y(v) + 3}" text-anchor="end">${num(v, 1)}</text>`).join('')}
+    ${tk(x0 + px, x1 - px).map(v => `<text x="${X(v)}" y="${H - 18}" text-anchor="middle">${num(v, 1)}</text>`).join('')}
+    <text x="${(P.l + W - P.r) / 2}" y="${H - 3}" text-anchor="middle">${esc(xl)}</text>
+    ${pts.length >= 3 && sxx ? `<line x1="${X(x0 + px)}" y1="${Y(a + b * (x0 + px))}" x2="${X(x1 - px)}" y2="${Y(a + b * (x1 - px))}" stroke="var(--warn)" stroke-width="1.5" stroke-dasharray="5 4"/>` : ''}
+    ${pts.map(p => `<circle cx="${X(p[0])}" cy="${Y(p[1])}" r="4" fill="var(--accent)" fill-opacity=".75"><title>${p[2] ? fD(p[2]) + ': ' : ''}${num(p[0], 1)} · ${num(p[1], 1)}</title></circle>`).join('')}
+  </svg>`;
+}
+function groupChart(groups, yl) {
+  const W = 360, H = 150, max = Math.max(1, ...groups.map(g => g.v || 0)) * 1.15, bw = 90;
+  return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(yl)}">
+    <line x1="20" x2="${W - 20}" y1="${H - 30}" y2="${H - 30}" stroke="var(--line)"/>
+    ${groups.map((g, i) => { const x = 70 + i * 140, h = g.v == null ? 0 : (H - 50) * g.v / max;
+      return `<rect x="${x}" y="${H - 30 - h}" width="${bw}" height="${h}" rx="5" fill="${i ? 'var(--accent)' : 'var(--line2)'}"/><text x="${x + bw / 2}" y="${H - 34 - h}" text-anchor="middle" style="fill:var(--ink);font-weight:700">${g.v == null ? '—' : num(g.v, 1)}</text><text x="${x + bw / 2}" y="${H - 12}" text-anchor="middle">${esc(g.label)} (n=${g.n})</text>`; }).join('')}
+  </svg>`;
+}
+const ANALYSES = [
+  {kind: 'xy', x: 'sleepH', y: 'rpe', title: 'Horas de sueño → esfuerzo de la sesión', xl: 'Sueño la noche anterior (h)', yl: 'RPE', split: 7, lo: 'menos de 7 h', hi: '7 h o más', src: 'Cuaderno', need: 'Apunta sueño y RPE en cada sesión del Cuaderno.'},
+  {kind: 'xy', x: 'sleepH', y: 'hrv', title: 'Horas de sueño → VFC', xl: 'Sueño (h)', yl: 'VFC (ms)', split: 7, lo: 'menos de 7 h', hi: '7 h o más', src: 'Cuaderno', need: 'Apunta sueño y VFC en el Cuaderno.'},
+  {kind: 'group', g: 'prevSleepHabit', y: 'hrv', title: 'Noche protegida (hábito) → VFC al día siguiente', yl: 'VFC media (ms)', labels: ['Sin proteger', 'Protegida'], src: 'Arc + Cuaderno', need: 'Marca «Proteger el sueño» y apunta la VFC en el Cuaderno.'},
+  {kind: 'xy', x: 'phoneMin', y: 'focus', title: 'Minutos de móvil → foco', xl: 'Móvil (min)', yl: 'Foco (1–5)', split: 120, lo: 'menos de 2 h', hi: '2 h o más', src: 'Arc', need: 'En Hoy, apunta los minutos de móvil y el foco.'},
+  {kind: 'xy', x: 'coreDone', y: 'energy', title: 'Hábitos del núcleo cumplidos → energía', xl: 'Hábitos cumplidos ese día', yl: 'Energía (1–5)', src: 'Arc', need: 'Rellena el check-in de energía en Hoy.'},
+  {kind: 'group', g: 'trained', y: 'motivation', title: 'Entrenar → motivación del mismo día', yl: 'Motivación media (1–5)', labels: ['Sin entreno', 'Con entreno'], src: 'Arc + Cuaderno', need: 'Rellena el check-in de motivación en Hoy.'},
+];
+function analysisCard(a, rows) {
+  if (a.kind === 'xy') {
+    const pts = rows.filter(r => r[a.x] != null && r[a.y] != null).map(r => [r[a.x], r[a.y], r.date]);
+    const head = `<div class="spread"><div class="kicker">${esc(a.src)}</div><span class="chip ${pts.length >= 10 ? 'ok' : ''}">n = ${pts.length}</span></div><h3 style="margin:8px 0">${esc(a.title)}</h3>`;
+    if (pts.length < 3) return `<div class="card">${head}<p class="small muted" style="margin:0">Aún no hay datos suficientes. ${esc(a.need)}</p></div>`;
+    const r = pearson(pts.map(p => p[0]), pts.map(p => p[1])), yn = a.yl.split(' (')[0];
+    let split = '';
+    if (a.split != null) { const lo = pts.filter(p => p[0] < a.split), hi = pts.filter(p => p[0] >= a.split);
+      if (lo.length && hi.length) split = ` Con ${a.lo}, tu ${yn} medio es <b>${num(avg(lo.map(p => p[1])), 1)}</b> (n=${lo.length}); con ${a.hi}, <b>${num(avg(hi.map(p => p[1])), 1)}</b> (n=${hi.length}).`; }
+    const dir = r == null ? '' : r > 0 ? `cuanto más ${a.xl.split(' (')[0].toLowerCase()}, más ${yn}` : `cuanto más ${a.xl.split(' (')[0].toLowerCase()}, menos ${yn}`;
+    return `<div class="card">${head}${scatterChart(pts, a.xl, a.yl)}
+      <p class="small" style="margin:8px 0 0">${r == null ? 'Sin variación suficiente para calcular la relación.' : `${rWords(r)[0].toUpperCase() + rWords(r).slice(1)} (r = ${num(r, 2)})${Math.abs(r) >= .2 ? `: ${dir}` : ''}.`}${split}</p>
+      ${pts.length < 10 ? '<p class="tiny muted" style="margin:6px 0 0">Con menos de 10 días es una pista, no una conclusión.</p>' : ''}</div>`;
+  }
+  const valid = rows.filter(r => r[a.g] != null && r[a.y] != null);
+  const gs = [0, 1].map(v => { const ys = valid.filter(r => r[a.g] === v).map(r => r[a.y]); return {label: a.labels[v], n: ys.length, v: ys.length ? avg(ys) : null}; });
+  const head = `<div class="spread"><div class="kicker">${esc(a.src)}</div><span class="chip ${valid.length >= 10 ? 'ok' : ''}">n = ${valid.length}</span></div><h3 style="margin:8px 0">${esc(a.title)}</h3>`;
+  if (gs.some(g => g.n < 2)) return `<div class="card">${head}<p class="small muted" style="margin:0">Aún no hay datos suficientes en los dos grupos. ${esc(a.need)}</p></div>`;
+  const d = gs[1].v - gs[0].v;
+  return `<div class="card">${head}${groupChart(gs, a.yl)}<p class="small" style="margin:8px 0 0">${gs[1].label}: <b>${num(gs[1].v, 1)}</b> frente a ${num(gs[0].v, 1)} (${d >= 0 ? '+' : ''}${num(d, 1)}).</p>
+    ${valid.length < 10 ? '<p class="tiny muted" style="margin:6px 0 0">Con menos de 10 días es una pista, no una conclusión.</p>' : ''}</div>`;
+}
+function viewAnalisis() {
+  const rows = dailyData();
+  const nCu = rows.filter(r => r.sessions).length, nMood = rows.filter(r => r.energy != null || r.focus != null).length;
+  return `<div class="card"><div class="kicker">Tu proyecto de deporte y datos</div><h2>¿Cómo afectan el sueño y el móvil a mi entrenamiento?</h2>
+      <p class="small muted" style="margin:0">Cruzo tus sesiones del Cuaderno (sueño, VFC, RPE) con tus hábitos y check-ins de Arc. ${nCu} días con sesión y ${nMood} check-ins desde ${fD(rows.length ? rows[0].date : today())}.</p>
+      <div class="row" style="margin-top:10px"><button class="btn" data-act="csv">Descargar datos (CSV)</button><span class="tiny muted">Un día por fila, para analizarlo en Python o Excel.</span></div></div>
+    ${ANALYSES.map(a => analysisCard(a, rows)).join('')}
+    <div class="card"><div class="kicker">Cómo leerlo</div><p class="small" style="margin:0">r va de −1 a 1: cerca de 0 no hay relación; ±0,4 o más empieza a ser interesante. Una correlación no demuestra causa, y con pocos días cambia mucho. Lo que más ayuda: apuntar sueño, VFC y RPE en cada sesión del Cuaderno y el check-in diario aquí.</p></div>`;
+}
+function downloadCsv() {
+  const rows = dailyData(), cols = ['date','sleepH','hrv','rhr','rpe','recovery','km','sessions','energy','focus','motivation','phoneMin','sleepHabit','prevSleepHabit','phoneHabit','readingHabit','coreDone'];
+  const csv = [cols.join(',')].concat(rows.map(r => cols.map(c => r[c] == null ? '' : typeof r[c] === 'number' ? Math.round(r[c] * 100) / 100 : r[c]).join(','))).join('\n');
+  const u = URL.createObjectURL(new Blob([csv], {type: 'text/csv'})), x = document.createElement('a'); x.href = u; x.download = `arc-datos-${today()}.csv`; x.click(); setTimeout(() => URL.revokeObjectURL(u), 2000);
+}
+
 /* ---- Ajustes ---- */
 function viewAjustes() {
   return `<div class="card stack"><div class="kicker">Cuenta</div><h2>Ajustes</h2>
@@ -826,6 +962,7 @@ function habitSheet(id) {
     <div class="row" style="flex-wrap:nowrap"><label class="f" style="flex:1">Frecuencia<select name="freq"><option value="weekly">Semanal</option><option value="monthly" ${h.freq === 'monthly' ? 'selected' : ''}>Mensual</option></select></label>
       <label class="f" style="flex:1">Ideal<input type="number" name="target" min="1" max="31" value="${h.target}"></label>
       <label class="f" style="flex:1">Mínimo<input type="number" name="min" min="0" max="31" value="${h.min ?? h.target}"></label></div>
+    <label class="f">Mínimo en semana de entrega (vacío = igual)<input type="number" name="minLoad" min="0" max="31" value="${h.minLoad ?? ''}"></label>
     <label class="chk"><input type="checkbox" name="core" ${h.core ? 'checked' : ''}> Núcleo (cuenta para ganar la semana)</label>
     <label class="f">Objetivo grande al que empuja<select name="goal"><option value="">—</option>${gs.map(g => `<option value="${esc(g.id)}" ${h.goal === g.id ? 'selected' : ''}>${esc(g.title)}</option>`).join('')}</select></label>
     <div class="row" style="flex-wrap:nowrap"><label class="f" style="flex:1">Desde<input type="date" name="from" value="${h.from || ''}"></label><label class="f" style="flex:1">Hasta (opcional)<input type="date" name="to" value="${h.to || ''}"></label></div>
@@ -845,7 +982,7 @@ function goalSheet(id, big) {
     <label class="f">Nota<input type="text" name="note" value="${esc(g.note || '')}"></label>
     <label class="chk"><input type="checkbox" name="big" ${g.big ? 'checked' : ''}> Objetivo grande (norte)</label>
     <label class="f">Dentro de<select name="parent"><option value="">—</option>${bigs.map(b => `<option value="${esc(b.id)}" ${g.parent === b.id ? 'selected' : ''}>${esc(b.title)}</option>`).join('')}</select></label>
-    ${id ? `<div><div class="small muted" style="margin-bottom:6px">Hitos (uno por línea; añade la fecha al final con | 2027-03-14)</div><textarea name="ms" rows="5">${esc((g.milestones || []).map(m => m.title + (m.due ? ' | ' + m.due : '')).join('\n'))}</textarea></div>` : ''}
+    ${id ? `<div><div class="small muted" style="margin-bottom:6px">Hitos (uno por línea; fecha al final con | 2027-03-14; añade * al principio si es una entrega)</div><textarea name="ms" rows="6">${esc((g.milestones || []).map(m => (m.entrega ? '* ' : '') + m.title + (m.due ? ' | ' + m.due : '')).join('\n'))}</textarea></div>` : ''}
     <label class="chk"><input type="checkbox" name="done" ${g.done ? 'checked' : ''}> Cumplido</label>
     <div class="row"><button class="btn primary">Guardar</button><button class="btn ghost" type="button" data-act="close">Cancelar</button>${id ? '<button class="btn danger" type="button" data-act="goal-del" data-g="' + esc(id) + '">Borrar</button>' : ''}</div></form>`);
 }
@@ -898,6 +1035,12 @@ document.addEventListener('click', async e => {
     case 'goal-edit': goalSheet(el.dataset.g); break;
     case 'goal-del': if (confirmTwice(el, 'Pulsa otra vez para borrar')) { del('goal', el.dataset.g); closeSheet(); render(); } break;
     case 'logout': await SB.auth.signOut(); break;
+    case 'raise-min': habits().filter(h => h.minUp && h.minUp > (h.min || 0)).forEach(h => { const b = Object.assign({}, h, {min: h.minUp}); delete b.minUp; put('habit', h.id, b); }); toast('Mínimos subidos. A por ello.'); render(); break;
+    case 'load-toggle': { const mon = el.dataset.m, L = JSON.parse(JSON.stringify(S.items.meta.load || {on: [], off: []})); L.on = L.on || []; L.off = L.off || [];
+      const li = loadInfo(mon), auto = (() => { const x = L.off.filter(m => m !== mon); const saved = S.items.meta.load; S.items.meta.load = {on: [], off: x}; const r = loadInfo(mon); S.items.meta.load = saved; return r && r.auto; })();
+      if (li) { L.on = L.on.filter(m => m !== mon); if (auto) L.off.push(mon); } else { L.off = L.off.filter(m => m !== mon); if (!auto) L.on.push(mon); }
+      put('meta', 'load', L); render(); break; }
+    case 'csv': downloadCsv(); break;
     case 'export': { const blob = new Blob([JSON.stringify({exportedAt: new Date().toISOString(), items: S.items}, null, 1)], {type: 'application/json'}); const u = URL.createObjectURL(blob); const x = document.createElement('a'); x.href = u; x.download = `arc-${today()}.json`; x.click(); setTimeout(() => URL.revokeObjectURL(u), 2000); break; }
     case 'setup-import': case 'setup-empty': {
       const msg = $('#setupMsg'); el.disabled = true;
@@ -935,12 +1078,12 @@ document.addEventListener('submit', async e => {
       if (!st && !note) del('log', id); else put('log', id, {habit: h.id, date: d, status: st, count: cnt, note}); closeSheet(); render(); break; }
     case 'habit': { const id = f.dataset.h || uid(), old = S.items.habit[id] || {order: 50};
       const b = Object.assign({}, old, {id, name: v('name'), detail: v('detail'), focus: v('focus') || null, freq: v('freq'), target: Math.max(1, +v('target') || 1), min: Math.max(0, +v('min')), core: fd.get('core') === 'on',
-        goal: v('goal') || null, from: v('from') || today(), to: v('to') || null, source: fd.get('cuaderno') === 'on' ? 'cuaderno' : 'manual', multi: fd.get('multi') === 'on', paused: fd.get('paused') === 'on', days: old.days || ALL_DAYS});
+        goal: v('goal') || null, minLoad: v('minLoad') === '' ? null : Math.max(0, +v('minLoad')), from: v('from') || today(), to: v('to') || null, source: fd.get('cuaderno') === 'on' ? 'cuaderno' : 'manual', multi: fd.get('multi') === 'on', paused: fd.get('paused') === 'on', days: old.days || ALL_DAYS});
       if (!b.core) b.min = b.target; else b.min = Math.min(b.min || b.target, b.target);
       put('habit', id, b); closeSheet(); render(); break; }
     case 'goal': { const id = f.dataset.g || uid(), old = S.items.goal[id] || {milestones: [], order: 30};
       const b = Object.assign({}, old, {id, title: v('title'), due: v('due') || null, why: v('why'), note: v('note'), big: fd.get('big') === 'on', parent: v('parent') || null, done: fd.get('done') === 'on'});
-      if (fd.has('ms')) { const prev = old.milestones || []; b.milestones = v('ms').split('\n').map(x => x.trim()).filter(Boolean).map(line => { const [t, d] = line.split('|').map(s => s.trim()); const p = prev.find(m => m.title === t) || {}; return {title: t, due: /^\d{4}-\d{2}-\d{2}$/.test(d || '') ? d : null, done: !!p.done, doneAt: p.doneAt || null}; }); }
+      if (fd.has('ms')) { const prev = old.milestones || []; b.milestones = v('ms').split('\n').map(x => x.trim()).filter(Boolean).map(line => { const ent = /^\*\s*/.test(line); const [t, d] = line.replace(/^\*\s*/, '').split('|').map(s => s.trim()); const p = prev.find(m => m.title === t) || {}; return {title: t, due: /^\d{4}-\d{2}-\d{2}$/.test(d || '') ? d : null, done: !!p.done, doneAt: p.doneAt || null, entrega: ent}; }); }
       put('goal', id, b); closeSheet(); render(); break; }
     case 'review': { const rw = S.statsWeek; put('review', rw, {week: rw, answers: REVIEW_Q.map((_, i) => v('a' + i)), savedAt: new Date().toISOString()}); toast('Revisión guardada.'); render(); break; }
   }
